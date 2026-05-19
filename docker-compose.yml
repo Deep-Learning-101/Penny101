@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 資料庫
+  db:
+    image: postgres:15-alpine
+    container_name: penny101-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: penny101
+      POSTGRES_USER: penny101
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-penny101_dev_password}
+      TZ: Asia/Taipei
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penny101"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - penny101-network
+
+  # Next.js Web 應用
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    container_name: penny101-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://penny101:${POSTGRES_PASSWORD:-penny101_dev_password}@db:5432/penny101
+      - TZ=Asia/Taipei
+      - NEXT_TELEMETRY_DISABLED=1
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - penny101-network
+    # 健康檢查
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  penny101-network:
+    driver: bridge

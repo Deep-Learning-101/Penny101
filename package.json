@@ -1,0 +1,53 @@
+{
+  "name": "penny101",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx scripts/seed.ts",
+    "test:actions": "tsx scripts/test-actions.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Deep-Learning-101/Penny101.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Deep-Learning-101/Penny101/issues"
+  },
+  "homepage": "https://github.com/Deep-Learning-101/Penny101#readme",
+  "dependencies": {
+    "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
+    "decimal.js": "^10.6.0",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.16.0",
+    "next": "^16.2.6",
+    "postgres": "^3.4.9",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^6.0.3"
+  }
+}

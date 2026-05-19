@@ -149,6 +149,7 @@ activemq-data/
 
 # Environments
 .env
+.env.*
 .envrc
 .venv
 env/
@@ -156,6 +157,108 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# ========================================
+# Node.js 標準排除項目
+# ========================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.nuxt/
+.cache/
+.parcel-cache/
+.vite/
+.turbo/
+
+# Testing
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ========================================
+# Penny101 專案特定排除項目 - 嚴格防護
+# ========================================
+
+# 【絕對禁止追蹤】CSV 資料檔案（包含敏感財務資料）
+*.csv
+Penny101_export.csv
+# 任何匯入/匯出相關的 CSV
+*_export.csv
+*_import.csv
+*export*.csv
+*import*.csv
+
+# 【絕對禁止追蹤】SQL 備份檔案
+*.sql
+*.sql.gz
+*.sql.zip
+*.sql.tar
+*.sql.tar.gz
+*.dump
+*.dump.gz
+*.bak
+*.backup
+# 任何包含 backup 或 dump 的壓縮檔
+*backup*.gz
+*dump*.gz
+*backup*.tar.gz
+*dump*.tar.gz
+
+# 【絕對禁止追蹤】docs/ 資料夾（包含系統機密）
+docs/
+# 但允許公開的部署文件
+!docs/DEPLOYMENT.md
+!docs/PRD.md
+
+# 【絕對禁止追蹤】Docker 資料庫掛載目錄
+pg_data/
+postgres_data/
+db_data/
+mysql_data/
+mongo_data/
+
+# 【絕對禁止追蹤】憑證與金鑰目錄
+scripts/credentials/
+credentials/
+keys/
+secrets/
+
+# 【絕對禁止追蹤】Google Drive API 與 rclone 相關設定
+**/credentials.json
+**/token.json
+rclone.conf
+.rclone/
+
+# 其他可能的資料庫檔案
+*.db
+*.sqlite
+*.sqlite3
 
 # Spyder project settings
 .spyderproject

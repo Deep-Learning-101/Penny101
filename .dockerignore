@@ -1,0 +1,57 @@
+# 依賴
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# 建置輸出
+.next
+out
+dist
+build
+
+# 測試
+coverage
+.nyc_output
+
+# 環境變數
+.env
+.env.*
+!.env.example
+
+# 開發工具
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Git
+.git
+.gitignore
+
+# 文件
+*.md
+!README.md
+
+# 資料
+*.csv
+*.sql
+*.dump
+docs/
+pg_data/
+postgres_data/
+db_data/
+
+# 腳本
+scripts/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

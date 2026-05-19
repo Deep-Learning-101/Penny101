@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 資料庫（生產環境）
+  db:
+    image: postgres:15-alpine
+    container_name: penny101-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: penny101
+      POSTGRES_USER: penny101
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Taipei
+    ports:
+      - "5432:5432"
+    volumes:
+      - /opt/penny101/pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penny101"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - penny101-network
+    # 資源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Next.js Web 應用（生產環境）
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+    container_name: penny101-web-prod
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://penny101:${POSTGRES_PASSWORD}@db:5432/penny101
+      - TZ=Asia/Taipei
+      - NEXT_TELEMETRY_DISABLED=1
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - penny101-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # 資源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # 日誌設定
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  penny101-network:
+    driver: bridge
