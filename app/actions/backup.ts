@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import Papa from "papaparse";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -64,12 +65,27 @@ export async function exportTransactionsCSV() {
 /**
  * 匯入 CSV 交易記錄（自動創建缺失的帳戶和分類）
  * 支援外部記帳軟體格式："日期","類別","主分類","子分類","帳戶","專案","金額","匯率","小計","更新時間","地址","發票號碼","轉帳","備註"
+ * 使用 PapaParse 解析 CSV，正確處理備註欄位中的換行符號
  */
 export async function importTransactionsCSV(csvContent: string) {
   try {
-    // 解析 CSV
-    const lines = csvContent.trim().split("\n");
-    if (lines.length < 2) {
+    // 使用 PapaParse 解析 CSV
+    const parseResult = Papa.parse(csvContent, {
+      header: false,
+      skipEmptyLines: true,
+    });
+
+    if (parseResult.errors.length > 0) {
+      console.error("CSV 解析錯誤:", parseResult.errors);
+      return {
+        success: false,
+        error: `CSV 解析錯誤：${parseResult.errors[0].message}`,
+      };
+    }
+
+    const rows = parseResult.data as string[][];
+
+    if (rows.length < 2) {
       return {
         success: false,
         error: "CSV 檔案格式錯誤或沒有資料",
@@ -77,11 +93,11 @@ export async function importTransactionsCSV(csvContent: string) {
     }
 
     // 讀取標題行（用於檢測格式）
-    const headerLine = lines[0];
-    const isExternalFormat = headerLine.includes("主分類") || headerLine.includes("子分類");
+    const headerRow = rows[0];
+    const isExternalFormat = headerRow.some((col) => col.includes("主分類") || col.includes("子分類"));
 
     // 跳過標題行
-    const dataLines = lines.slice(1);
+    const dataRows = rows.slice(1);
 
     // 建立帳戶和分類的名稱到 ID 的對應表
     const accountMap = new Map<string, number>();
@@ -99,36 +115,23 @@ export async function importTransactionsCSV(csvContent: string) {
     const createdAccounts: string[] = [];
     const createdCategories: string[] = [];
 
-    for (let i = 0; i < dataLines.length; i++) {
-      const line = dataLines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+
+      // 確保該行有足夠的欄位
+      if (!row || row.length < 14) {
+        errors.push(`第 ${i + 2} 行：欄位數量不足（需要至少 14 個欄位）`);
+        continue;
+      }
 
       try {
-        // 解析 CSV 行（處理帶引號的欄位）
-        const parts: string[] = [];
-        let current = "";
-        let inQuotes = false;
-
-        for (let j = 0; j < line.length; j++) {
-          const char = line[j];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === "," && !inQuotes) {
-            parts.push(current);
-            current = "";
-          } else {
-            current += char;
-          }
-        }
-        parts.push(current);
-
         // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 4=帳戶, 6=金額, 13=備註）
-        const transactionDate = parts[0]?.replace(/^"|"$/g, "").trim();
-        const type = parts[1]?.replace(/^"|"$/g, "").trim();
-        const rawCategory = parts[2]?.replace(/^"|"$/g, "").trim();
-        const cleanAccountName = parts[4]?.replace(/^"|"$/g, "").trim();
-        const amount = parts[6]?.replace(/^"|"$/g, "").trim();
-        const cleanMemo = parts[13]?.replace(/^"|"$/g, "").trim() || "";
+        const transactionDate = row[0]?.trim() || "";
+        const type = row[1]?.trim() || "";
+        const rawCategory = row[2]?.trim() || "";
+        const cleanAccountName = row[4]?.trim() || "";
+        const amount = row[6]?.trim() || "";
+        const cleanMemo = row[13]?.trim() || "";
         // 極度重要：遇到轉帳或無分類時，強制設為"未分類"
         const cleanCategoryName = rawCategory || "未分類";
 

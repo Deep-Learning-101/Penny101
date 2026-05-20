@@ -5,6 +5,9 @@ import {
   getYearSummary,
   getYearlyTrend,
   getYearlyExpenseByCategory,
+  getMonthlyExpenseByCategory,
+  getMonthlyTopExpenses,
+  getYearlyMonthlyBalance,
 } from "@/app/actions/reports";
 import { ReportCharts } from "@/app/components/ReportCharts";
 import dayjs from "dayjs";
@@ -17,28 +20,88 @@ dayjs.extend(timezone);
 // 強制動態渲染
 export const dynamic = "force-dynamic";
 
-export default async function ReportsPage() {
+interface ReportsPageProps {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const params = await searchParams;
   const now = dayjs().tz("Asia/Taipei");
-  const year = now.year();
-  const month = now.month() + 1;
+  const year = params.year ? parseInt(params.year) : now.year();
+  const month = params.month ? parseInt(params.month) : now.month() + 1;
 
   // 載入所有資料
-  const [monthSummary, yearSummary, yearlyTrend, expenseByCategory] =
-    await Promise.all([
-      getMonthSummary(year, month),
-      getYearSummary(year),
-      getYearlyTrend(year),
-      getYearlyExpenseByCategory(year),
-    ]);
+  const [
+    monthSummary,
+    yearSummary,
+    yearlyTrend,
+    expenseByCategory,
+    monthlyExpenseByCategory,
+    monthlyTopExpenses,
+    yearlyMonthlyBalance,
+  ] = await Promise.all([
+    getMonthSummary(year, month),
+    getYearSummary(year),
+    getYearlyTrend(year),
+    getYearlyExpenseByCategory(year),
+    getMonthlyExpenseByCategory(year, month),
+    getMonthlyTopExpenses(year, month),
+    getYearlyMonthlyBalance(year),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* 頁首 */}
+      {/* 頁首與時間導航 */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">財務報表</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground mb-4">
           {year} 年度財務彙整與分析
         </p>
+
+        {/* 時間導航控制器 (Client Component) */}
+        <div className="flex gap-4 items-center flex-wrap">
+          <div className="flex gap-2 items-center">
+            <span className="text-sm font-medium">年份：</span>
+            <a
+              href={`/reports?year=${year - 1}&month=${month}`}
+              className="px-3 py-1 text-sm border rounded hover:bg-accent"
+            >
+              ← {year - 1}
+            </a>
+            <span className="px-4 py-1 text-sm font-bold bg-primary text-primary-foreground rounded">
+              {year}
+            </span>
+            <a
+              href={`/reports?year=${year + 1}&month=${month}`}
+              className="px-3 py-1 text-sm border rounded hover:bg-accent"
+            >
+              {year + 1} →
+            </a>
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <span className="text-sm font-medium">月份：</span>
+            <a
+              href={`/reports?year=${month === 1 ? year - 1 : year}&month=${
+                month === 1 ? 12 : month - 1
+              }`}
+              className="px-3 py-1 text-sm border rounded hover:bg-accent"
+            >
+              ← 上月
+            </a>
+            <span className="px-4 py-1 text-sm font-bold bg-primary text-primary-foreground rounded">
+              {month} 月
+            </span>
+            <a
+              href={`/reports?year=${month === 12 ? year + 1 : year}&month=${
+                month === 12 ? 1 : month + 1
+              }`}
+              className="px-3 py-1 text-sm border rounded hover:bg-accent"
+            >
+              下月 →
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* 本月總結 */}
@@ -169,6 +232,11 @@ export default async function ReportsPage() {
       <ReportCharts
         yearlyTrend={yearlyTrend}
         expenseByCategory={expenseByCategory}
+        monthlyExpenseByCategory={monthlyExpenseByCategory}
+        monthlyTopExpenses={monthlyTopExpenses}
+        yearlyMonthlyBalance={yearlyMonthlyBalance}
+        currentYear={year}
+        currentMonth={month}
       />
     </div>
   );

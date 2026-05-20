@@ -209,3 +209,139 @@ export async function getYearlyExpenseByCategory(year: number) {
     return []; // 返回空陣列避免崩潰
   }
 }
+
+/**
+ * 取得本月支出分類圓餅圖
+ */
+export async function getMonthlyExpenseByCategory(year: number, month: number) {
+  try {
+    const { start, end } = getMonthRange(year, month);
+
+    const categoryData = await db
+      .select({
+        categoryName: categories.name,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          gte(transactions.transactionDate, start),
+          lt(transactions.transactionDate, end),
+          eq(transactions.type, "支出")
+        )
+      )
+      .groupBy(categories.name)
+      .orderBy(sql`COALESCE(SUM(${transactions.amount}), 0) DESC`);
+
+    // 如果沒有資料，回傳空陣列
+    if (!categoryData || categoryData.length === 0) {
+      return [];
+    }
+
+    // 計算總支出
+    let totalExpense = new Decimal(0);
+    for (const row of categoryData) {
+      totalExpense = totalExpense.plus(row.total || "0");
+    }
+
+    // 計算百分比
+    return categoryData.map((row) => {
+      const amount = new Decimal(row.total || "0");
+      const percentage =
+        totalExpense.toNumber() > 0
+          ? amount.dividedBy(totalExpense).times(100).toFixed(1)
+          : "0";
+
+      return {
+        name: row.categoryName || "未知",
+        value: parseFloat(row.total || "0"),
+        percentage,
+      };
+    });
+  } catch (error) {
+    console.error("getMonthlyExpenseByCategory error:", error);
+    return []; // 返回空陣列避免崩潰
+  }
+}
+
+/**
+ * 取得本月支出排行榜 Top 5
+ */
+export async function getMonthlyTopExpenses(year: number, month: number) {
+  try {
+    const { start, end } = getMonthRange(year, month);
+
+    const topExpenses = await db
+      .select({
+        categoryName: categories.name,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          gte(transactions.transactionDate, start),
+          lt(transactions.transactionDate, end),
+          eq(transactions.type, "支出")
+        )
+      )
+      .groupBy(categories.name)
+      .orderBy(sql`COALESCE(SUM(${transactions.amount}), 0) DESC`)
+      .limit(5);
+
+    return topExpenses.map((row) => ({
+      name: row.categoryName || "未知",
+      value: parseFloat(row.total || "0"),
+    }));
+  } catch (error) {
+    console.error("getMonthlyTopExpenses error:", error);
+    return []; // 返回空陣列避免崩潰
+  }
+}
+
+/**
+ * 取得年度各月結餘趨勢
+ */
+export async function getYearlyMonthlyBalance(year: number) {
+  try {
+    const { start, end } = getYearRange(year);
+
+    const monthlyData = await db
+      .select({
+        month: sql<string>`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`,
+        type: transactions.type,
+        total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
+      })
+      .from(transactions)
+      .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)))
+      .groupBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`, transactions.type)
+      .orderBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`);
+
+    // 整理成前端需要的格式（計算結餘）
+    const monthMap = new Map<
+      string,
+      { month: string; income: number; expense: number; balance: number }
+    >();
+
+    for (const row of monthlyData) {
+      if (!row.month) continue;
+      if (!monthMap.has(row.month)) {
+        monthMap.set(row.month, { month: row.month, income: 0, expense: 0, balance: 0 });
+      }
+      const entry = monthMap.get(row.month)!;
+      const amount = parseFloat(row.total || "0");
+      if (row.type === "收入") {
+        entry.income = amount;
+      } else if (row.type === "支出") {
+        entry.expense = amount;
+      }
+      entry.balance = entry.income - entry.expense;
+    }
+
+    return Array.from(monthMap.values());
+  } catch (error) {
+    console.error("getYearlyMonthlyBalance error:", error);
+    return []; // 返回空陣列避免崩潰
+  }
+}

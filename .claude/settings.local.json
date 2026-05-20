@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx *)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const Papa = require\\('papaparse'\\); console.log\\('PapaParse version:', Papa.version || 'loaded'\\);\")"
+    ]
+  }
+}
