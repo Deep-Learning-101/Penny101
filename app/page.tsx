@@ -2,6 +2,9 @@ import { Suspense } from "react";
 import { Dashboard } from "./components/Dashboard";
 import { AddTransactionFAB } from "./components/AddTransactionFAB";
 
+// 強制動態渲染，避免 Build 時連接資料庫
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">

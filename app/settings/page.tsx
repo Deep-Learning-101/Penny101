@@ -3,6 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CategoryManagement } from "./components/CategoryManagement";
 import { AccountManagement } from "./components/AccountManagement";
 
+// 強制動態渲染，避免 Build 時連接資料庫
+export const dynamic = "force-dynamic";
+
 export default function SettingsPage() {
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
