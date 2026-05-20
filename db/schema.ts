@@ -16,6 +16,10 @@ export const accounts = pgTable("accounts", {
   name: varchar("name", { length: 100 }).notNull(),
   type: accountTypeEnum("type").notNull(),
   currency: varchar("currency", { length: 10 }).notNull().default("TWD"),
+  // 初始餘額（預設為 0）
+  initialBalance: decimal("initial_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  // 是否計入總資產統計（預設 true）
+  includeInTotal: boolean("include_in_total").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
@@ -59,6 +63,8 @@ export const transactions = pgTable("transactions", {
     .references(() => categories.id, { onDelete: "restrict" }),
   // 備註欄位支援多行文字
   memo: text("memo"),
+  // 是否計入收支統計（預設 true）- 可用於排除內部轉帳等不計入統計的交易
+  includeInStats: boolean("include_in_stats").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .notNull()
     .defaultNow(),

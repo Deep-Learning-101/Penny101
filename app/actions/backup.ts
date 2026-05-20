@@ -140,15 +140,18 @@ export async function importTransactionsCSV(csvContent: string) {
       }
 
       try {
-        // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 4=帳戶, 6=金額, 13=備註）
+        // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 3=子分類, 4=帳戶, 6=金額, 13=備註）
         const rawDate = row[0]?.trim() || "";
         const type = row[1]?.trim() || "";
-        const rawCategory = row[2]?.trim() || "";
+        const rawMainCategory = row[2]?.trim() || "";
+        const rawSubCategory = row[3]?.trim() || "";
         const cleanAccountName = row[4]?.trim() || "";
         const rawAmount = row[6]?.trim() || "";
         const cleanMemo = row[13]?.trim() || "";
-        // 極度重要：遇到轉帳或無分類時，強制設為"未分類"
-        const cleanCategoryName = rawCategory || "未分類";
+
+        // 決定主分類和子分類名稱
+        const mainCategoryName = rawMainCategory || "未分類";
+        const subCategoryName = rawSubCategory?.trim() || "";
 
         // 驗證資料 - 改為略過而非累積錯誤
         if (!rawDate || !rawAmount || !type || !cleanAccountName) {
@@ -192,20 +195,43 @@ export async function importTransactionsCSV(csvContent: string) {
           createdAccounts.push(cleanAccountName);
         }
 
-        // 檢查並自動創建分類
-        let categoryId = categoryMap.get(cleanCategoryName);
-        if (!categoryId) {
-          const [newCategory] = await db
+        // 檢查並自動創建主分類
+        let mainCategoryId = categoryMap.get(mainCategoryName);
+        if (!mainCategoryId) {
+          const [newMainCategory] = await db
             .insert(categories)
             .values({
-              name: cleanCategoryName,
+              name: mainCategoryName,
               type: type as "收入" | "支出",
               parentId: null,
             })
             .returning({ id: categories.id });
-          categoryId = newCategory.id;
-          categoryMap.set(cleanCategoryName, categoryId);
-          createdCategories.push(cleanCategoryName);
+          mainCategoryId = newMainCategory.id;
+          categoryMap.set(mainCategoryName, mainCategoryId);
+          createdCategories.push(mainCategoryName);
+        }
+
+        // 如果有子分類，檢查並自動創建子分類
+        let categoryId = mainCategoryId;
+        if (subCategoryName) {
+          const subCategoryKey = `${mainCategoryName}>${subCategoryName}`;
+          let subCategoryId = categoryMap.get(subCategoryKey);
+
+          if (!subCategoryId) {
+            const [newSubCategory] = await db
+              .insert(categories)
+              .values({
+                name: subCategoryName,
+                type: type as "收入" | "支出",
+                parentId: mainCategoryId,
+              })
+              .returning({ id: categories.id });
+            subCategoryId = newSubCategory.id;
+            categoryMap.set(subCategoryKey, subCategoryId);
+            createdCategories.push(`${mainCategoryName} > ${subCategoryName}`);
+          }
+
+          categoryId = subCategoryId;
         }
 
         recordsToImport.push({

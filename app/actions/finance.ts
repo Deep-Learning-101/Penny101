@@ -34,14 +34,21 @@ function getMonthRange(year: number, month: number) {
 export async function getDashboardStats(year: number, month: number) {
   const { start, end } = getMonthRange(year, month);
 
-  // 查詢當月所有交易
+  // 查詢當月所有交易（只計算 includeInStats = true 的交易）
   const monthTransactions = await db
     .select({
       amount: transactions.amount,
       type: transactions.type,
+      includeInStats: transactions.includeInStats,
     })
     .from(transactions)
-    .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)));
+    .where(
+      and(
+        gte(transactions.transactionDate, start),
+        lt(transactions.transactionDate, end),
+        eq(transactions.includeInStats, true)
+      )
+    );
 
   // 使用 decimal.js 計算總收入與總支出
   let totalIncome = new Decimal(0);
@@ -244,6 +251,7 @@ export async function addTransaction(data: {
   accountId: number;
   categoryId: number;
   memo?: string;
+  includeInStats?: boolean; // 是否計入統計（預設 true）
 }) {
   // 驗證金額格式（使用 decimal.js 驗證）
   let amountDecimal: Decimal;
@@ -282,6 +290,7 @@ export async function addTransaction(data: {
         accountId: data.accountId,
         categoryId: data.categoryId,
         memo: data.memo || null,
+        includeInStats: data.includeInStats ?? true,
       })
       .returning();
 

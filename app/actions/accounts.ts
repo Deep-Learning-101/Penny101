@@ -36,6 +36,8 @@ export async function createAccount(data: {
   name: string;
   type: "銀行" | "現金" | "電子支付";
   currency?: string;
+  initialBalance?: string;
+  includeInTotal?: boolean;
 }) {
   try {
     const [result] = await db
@@ -44,6 +46,8 @@ export async function createAccount(data: {
         name: data.name,
         type: data.type,
         currency: data.currency || "TWD",
+        initialBalance: data.initialBalance || "0",
+        includeInTotal: data.includeInTotal ?? true,
         isActive: true,
       })
       .returning();
@@ -70,6 +74,8 @@ export async function updateAccount(
     name?: string;
     type?: "銀行" | "現金" | "電子支付";
     currency?: string;
+    initialBalance?: string;
+    includeInTotal?: boolean;
     isActive?: boolean;
   }
 ) {

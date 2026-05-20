@@ -6,7 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
 
 /**
- * 取得所有帳戶及其餘額
+ * 取得所有帳戶及其餘額（包含初始餘額）
  */
 export async function getAccountsWithBalance() {
   const allAccounts = await db.select().from(accounts).orderBy(accounts.name);
@@ -34,13 +34,17 @@ export async function getAccountsWithBalance() {
         }
       }
 
-      const balance = totalIncome.minus(totalExpense);
+      // 餘額 = 初始餘額 + 收入 - 支出
+      const initialBalance = new Decimal(account.initialBalance || "0");
+      const balance = initialBalance.plus(totalIncome).minus(totalExpense);
 
       return {
         id: account.id,
         name: account.name,
         type: account.type,
         isActive: account.isActive,
+        initialBalance: account.initialBalance,
+        includeInTotal: account.includeInTotal,
         balance: balance.toFixed(2),
         transactionCount: accountTransactions.length,
       };
@@ -106,4 +110,24 @@ export async function getAccountInfo(accountId: number) {
     .limit(1);
 
   return account || null;
+}
+
+/**
+ * 計算總資產（只計算 includeInTotal = true 的帳戶）
+ */
+export async function getTotalAssets() {
+  const accountsWithBalance = await getAccountsWithBalance();
+
+  let totalAssets = new Decimal(0);
+
+  for (const account of accountsWithBalance) {
+    if (account.includeInTotal) {
+      totalAssets = totalAssets.plus(new Decimal(account.balance));
+    }
+  }
+
+  return {
+    totalAssets: totalAssets.toFixed(2),
+    includedAccountsCount: accountsWithBalance.filter((a) => a.includeInTotal).length,
+  };
 }
