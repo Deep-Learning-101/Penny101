@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BarChart3, Settings } from "lucide-react";
+import { Home, BarChart3, Wallet, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "首頁", icon: Home },
+  { href: "/accounts", label: "帳戶", icon: Wallet },
   { href: "/reports", label: "報表", icon: BarChart3 },
   { href: "/settings", label: "設定", icon: Settings },
 ];

@@ -3,13 +3,25 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Download, Upload, AlertCircle } from "lucide-react";
-import { exportTransactionsCSV, importTransactionsCSV } from "@/app/actions/backup";
+import { Download, Upload, AlertCircle, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { exportTransactionsCSV, importTransactionsCSV, clearAllTransactions } from "@/app/actions/backup";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function BackupRestore() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const handleExport = async () => {
@@ -65,6 +77,28 @@ export function BackupRestore() {
       setIsImporting(false);
       // 重置 input
       event.target.value = "";
+    }
+  };
+
+  const handleClearAll = async () => {
+    setIsClearing(true);
+    setMessage(null);
+
+    try {
+      const result = await clearAllTransactions();
+
+      if (result.success) {
+        setMessage({
+          type: "success",
+          text: "所有交易記錄已清空！",
+        });
+      } else {
+        setMessage({ type: "error", text: result.error || "清空失敗" });
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "清空失敗，請稍後再試" });
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -124,8 +158,52 @@ export function BackupRestore() {
             <li>匯出的 CSV 包含所有交易記錄（使用帳戶和分類名稱）</li>
             <li>匯入時會自動創建不存在的帳戶和分類</li>
             <li>匯入不會刪除現有資料，只會新增記錄</li>
-            <li>CSV 格式：id, transactionDate, amount, type, accountName, categoryName, memo</li>
+            <li>支援外部記帳軟體 CSV 格式自動辨識</li>
           </ul>
+        </div>
+
+        {/* 危險操作區 */}
+        <div className="pt-4 border-t">
+          <h3 className="text-sm font-semibold text-destructive mb-2">危險操作</h3>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                disabled={isClearing}
+                className="w-full sm:w-auto"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {isClearing ? "清空中..." : "清空所有交易記錄"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-destructive">
+                  ⚠️ 確認清空所有資料
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  <div className="space-y-2">
+                    <p className="font-semibold">此操作將永久刪除所有交易記錄！</p>
+                    <p>
+                      這個操作無法復原。建議在清空前先匯出 CSV 備份。
+                    </p>
+                    <p className="text-destructive">
+                      確定要清空所有交易記錄嗎？
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleClearAll}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  確認清空
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

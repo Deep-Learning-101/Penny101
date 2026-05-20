@@ -63,6 +63,7 @@ export async function exportTransactionsCSV() {
 
 /**
  * 匯入 CSV 交易記錄（自動創建缺失的帳戶和分類）
+ * 支援外部記帳軟體格式："日期","類別","主分類","子分類","帳戶","專案","金額","匯率","小計","更新時間","地址","發票號碼","轉帳","備註"
  */
 export async function importTransactionsCSV(csvContent: string) {
   try {
@@ -74,6 +75,10 @@ export async function importTransactionsCSV(csvContent: string) {
         error: "CSV 檔案格式錯誤或沒有資料",
       };
     }
+
+    // 讀取標題行（用於檢測格式）
+    const headerLine = lines[0];
+    const isExternalFormat = headerLine.includes("主分類") || headerLine.includes("子分類");
 
     // 跳過標題行
     const dataLines = lines.slice(1);
@@ -117,20 +122,49 @@ export async function importTransactionsCSV(csvContent: string) {
         }
         parts.push(current);
 
-        if (parts.length < 6) {
-          errors.push(`第 ${i + 2} 行：欄位數量不足`);
-          continue;
+        let transactionDate: string;
+        let amount: string;
+        let type: string;
+        let accountName: string;
+        let categoryName: string;
+        let memo: string;
+
+        if (isExternalFormat) {
+          // 外部格式：第0欄日期、第1欄類別、第2欄主分類、第4欄帳戶、第6欄金額、第13欄備註
+          if (parts.length < 7) {
+            errors.push(`第 ${i + 2} 行：欄位數量不足`);
+            continue;
+          }
+
+          transactionDate = parts[0]?.replace(/^"|"$/g, "").trim() || "";
+          type = parts[1]?.replace(/^"|"$/g, "").trim() || "";
+          categoryName = parts[2]?.replace(/^"|"$/g, "").trim() || "";
+          accountName = parts[4]?.replace(/^"|"$/g, "").trim() || "";
+          amount = parts[6]?.replace(/^"|"$/g, "").trim() || "";
+          memo = parts[13]?.replace(/^"|"$/g, "").trim() || "";
+
+          // 處理金額格式（移除小數點後多餘的 0）
+          if (amount) {
+            const numAmount = parseFloat(amount);
+            amount = numAmount.toString();
+          }
+        } else {
+          // 內部格式：id, transactionDate, amount, type, accountName, categoryName, memo
+          if (parts.length < 6) {
+            errors.push(`第 ${i + 2} 行：欄位數量不足`);
+            continue;
+          }
+
+          transactionDate = parts[1]?.replace(/^"|"$/g, "").trim() || "";
+          amount = parts[2]?.replace(/^"|"$/g, "").trim() || "";
+          type = parts[3]?.replace(/^"|"$/g, "").trim() || "";
+          accountName = parts[4]?.replace(/^"|"$/g, "").trim() || "";
+          categoryName = parts[5]?.replace(/^"|"$/g, "").trim() || "";
+          memo = parts[6]?.replace(/^"|"$/g, "").trim() || "";
         }
 
-        const [_id, transactionDate, amount, type, accountName, categoryName, memo] = parts;
-
-        // 移除引號
-        const cleanAccountName = accountName.replace(/^"|"$/g, "").trim();
-        const cleanCategoryName = categoryName.replace(/^"|"$/g, "").trim();
-        const cleanMemo = memo.replace(/^"|"$/g, "").trim();
-
         // 驗證資料
-        if (!transactionDate || !amount || !type || !cleanAccountName || !cleanCategoryName) {
+        if (!transactionDate || !amount || !type || !accountName || !categoryName) {
           errors.push(`第 ${i + 2} 行：必填欄位缺失`);
           continue;
         }
@@ -139,6 +173,10 @@ export async function importTransactionsCSV(csvContent: string) {
           errors.push(`第 ${i + 2} 行：類型必須是「收入」或「支出」`);
           continue;
         }
+
+        const cleanAccountName = accountName;
+        const cleanCategoryName = categoryName;
+        const cleanMemo = memo;
 
         // 檢查並自動創建帳戶
         let accountId = accountMap.get(cleanAccountName);
@@ -220,6 +258,30 @@ export async function importTransactionsCSV(csvContent: string) {
     return {
       success: false,
       error: "匯入失敗，請確認檔案格式正確",
+    };
+  }
+}
+
+/**
+ * 清空所有交易記錄（危險操作）
+ */
+export async function clearAllTransactions() {
+  try {
+    await db.delete(transactions);
+
+    // 更新所有頁面快取
+    revalidatePath("/");
+    revalidatePath("/reports");
+    revalidatePath("/accounts");
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("clearAllTransactions error:", error);
+    return {
+      success: false,
+      error: "清空資料失敗",
     };
   }
 }
