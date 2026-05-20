@@ -122,49 +122,18 @@ export async function importTransactionsCSV(csvContent: string) {
         }
         parts.push(current);
 
-        let transactionDate: string;
-        let amount: string;
-        let type: string;
-        let accountName: string;
-        let categoryName: string;
-        let memo: string;
-
-        if (isExternalFormat) {
-          // 外部格式：第0欄日期、第1欄類別、第2欄主分類、第4欄帳戶、第6欄金額、第13欄備註
-          if (parts.length < 7) {
-            errors.push(`第 ${i + 2} 行：欄位數量不足`);
-            continue;
-          }
-
-          transactionDate = parts[0]?.replace(/^"|"$/g, "").trim() || "";
-          type = parts[1]?.replace(/^"|"$/g, "").trim() || "";
-          categoryName = parts[2]?.replace(/^"|"$/g, "").trim() || "";
-          accountName = parts[4]?.replace(/^"|"$/g, "").trim() || "";
-          amount = parts[6]?.replace(/^"|"$/g, "").trim() || "";
-          memo = parts[13]?.replace(/^"|"$/g, "").trim() || "";
-
-          // 處理金額格式（移除小數點後多餘的 0）
-          if (amount) {
-            const numAmount = parseFloat(amount);
-            amount = numAmount.toString();
-          }
-        } else {
-          // 內部格式：id, transactionDate, amount, type, accountName, categoryName, memo
-          if (parts.length < 6) {
-            errors.push(`第 ${i + 2} 行：欄位數量不足`);
-            continue;
-          }
-
-          transactionDate = parts[1]?.replace(/^"|"$/g, "").trim() || "";
-          amount = parts[2]?.replace(/^"|"$/g, "").trim() || "";
-          type = parts[3]?.replace(/^"|"$/g, "").trim() || "";
-          accountName = parts[4]?.replace(/^"|"$/g, "").trim() || "";
-          categoryName = parts[5]?.replace(/^"|"$/g, "").trim() || "";
-          memo = parts[6]?.replace(/^"|"$/g, "").trim() || "";
-        }
+        // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 4=帳戶, 6=金額, 13=備註）
+        const transactionDate = parts[0]?.replace(/^"|"$/g, "").trim();
+        const type = parts[1]?.replace(/^"|"$/g, "").trim();
+        const rawCategory = parts[2]?.replace(/^"|"$/g, "").trim();
+        const cleanAccountName = parts[4]?.replace(/^"|"$/g, "").trim();
+        const amount = parts[6]?.replace(/^"|"$/g, "").trim();
+        const cleanMemo = parts[13]?.replace(/^"|"$/g, "").trim() || "";
+        // 極度重要：遇到轉帳或無分類時，強制設為"未分類"
+        const cleanCategoryName = rawCategory || "未分類";
 
         // 驗證資料
-        if (!transactionDate || !amount || !type || !accountName || !categoryName) {
+        if (!transactionDate || !amount || !type || !cleanAccountName) {
           errors.push(`第 ${i + 2} 行：必填欄位缺失`);
           continue;
         }
@@ -173,10 +142,6 @@ export async function importTransactionsCSV(csvContent: string) {
           errors.push(`第 ${i + 2} 行：類型必須是「收入」或「支出」`);
           continue;
         }
-
-        const cleanAccountName = accountName;
-        const cleanCategoryName = categoryName;
-        const cleanMemo = memo;
 
         // 檢查並自動創建帳戶
         let accountId = accountMap.get(cleanAccountName);
