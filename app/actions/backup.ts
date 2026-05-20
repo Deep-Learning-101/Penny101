@@ -89,7 +89,7 @@ export async function importTransactionsCSV(csvContent: string) {
       console.warn(`CSV 解析時發現 ${parseErrors.length} 個錯誤，將略過錯誤行並繼續處理正確資料`);
     }
 
-    if (rows.length < 2) {
+    if (rows.length < 1) {
       return {
         success: false,
         error: "CSV 檔案格式錯誤或沒有資料",
@@ -100,8 +100,14 @@ export async function importTransactionsCSV(csvContent: string) {
     const headerRow = rows[0];
     const isExternalFormat = headerRow.some((col) => col.includes("主分類") || col.includes("子分類"));
 
-    // 跳過標題行
-    const dataRows = rows.slice(1);
+    // 嚴格跳過標題行：檢查第一欄是否為「日期」或「id」等標題特徵
+    const isFirstRowHeader =
+      headerRow[0] === "日期" ||
+      headerRow[0] === "id" ||
+      headerRow[0] === "transactionDate" ||
+      headerRow.some((col) => col.includes("主分類") || col.includes("子分類"));
+
+    const dataRows = isFirstRowHeader ? rows.slice(1) : rows;
 
     // 建立帳戶和分類的名稱到 ID 的對應表
     const accountMap = new Map<string, number>();
@@ -122,6 +128,11 @@ export async function importTransactionsCSV(csvContent: string) {
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
 
+      // 再次檢查是否為標題列（防止標題混入資料）
+      if (row[0] === "日期" || row[0] === "id" || row[0] === "transactionDate") {
+        continue;
+      }
+
       // 確保該行有足夠的欄位 - 改為略過而非累積錯誤
       if (!row || row.length < 14) {
         skippedRows.push(`第 ${i + 2} 行：欄位數量不足`);
@@ -130,17 +141,17 @@ export async function importTransactionsCSV(csvContent: string) {
 
       try {
         // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 4=帳戶, 6=金額, 13=備註）
-        const transactionDate = row[0]?.trim() || "";
+        const rawDate = row[0]?.trim() || "";
         const type = row[1]?.trim() || "";
         const rawCategory = row[2]?.trim() || "";
         const cleanAccountName = row[4]?.trim() || "";
-        const amount = row[6]?.trim() || "";
+        const rawAmount = row[6]?.trim() || "";
         const cleanMemo = row[13]?.trim() || "";
         // 極度重要：遇到轉帳或無分類時，強制設為"未分類"
         const cleanCategoryName = rawCategory || "未分類";
 
         // 驗證資料 - 改為略過而非累積錯誤
-        if (!transactionDate || !amount || !type || !cleanAccountName) {
+        if (!rawDate || !rawAmount || !type || !cleanAccountName) {
           skippedRows.push(`第 ${i + 2} 行：必填欄位缺失`);
           continue;
         }
@@ -149,6 +160,21 @@ export async function importTransactionsCSV(csvContent: string) {
           skippedRows.push(`第 ${i + 2} 行：類型必須是「收入」或「支出」`);
           continue;
         }
+
+        // 嚴格轉換日期為 ISO 格式
+        const transactionDate = dayjs(rawDate).tz("Asia/Taipei").toISOString();
+        if (!dayjs(rawDate).isValid()) {
+          skippedRows.push(`第 ${i + 2} 行：日期格式無效`);
+          continue;
+        }
+
+        // 嚴格轉換金額為數字字串，防止 NaN
+        const amountNum = parseFloat(rawAmount);
+        if (isNaN(amountNum)) {
+          skippedRows.push(`第 ${i + 2} 行：金額格式無效`);
+          continue;
+        }
+        const amount = amountNum.toString();
 
         // 檢查並自動創建帳戶
         let accountId = accountMap.get(cleanAccountName);
@@ -236,7 +262,7 @@ export async function importTransactionsCSV(csvContent: string) {
     console.error("importTransactionsCSV error:", error);
     return {
       success: false,
-      error: "匯入失敗，請確認檔案格式正確",
+      error: "系統例外錯誤：" + (error instanceof Error ? error.message : String(error)),
     };
   }
 }
