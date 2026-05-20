@@ -43,31 +43,37 @@ export function ReportCharts({ yearlyTrend, expenseByCategory }: ReportChartsPro
           <CardTitle>全年收支趨勢</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={yearlyTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip
-                formatter={(value: any) => `NT$ ${Number(value).toLocaleString()}`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="income"
-                stroke="#10b981"
-                name="收入"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="expense"
-                stroke="#ef4444"
-                name="支出"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {!yearlyTrend || yearlyTrend.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              尚無收支趨勢資料
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={yearlyTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: any) => `NT$ ${Number(value || 0).toLocaleString()}`}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="income"
+                  stroke="#10b981"
+                  name="收入"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="expense"
+                  stroke="#ef4444"
+                  name="支出"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -77,7 +83,7 @@ export function ReportCharts({ yearlyTrend, expenseByCategory }: ReportChartsPro
           <CardTitle>全年支出分類佔比</CardTitle>
         </CardHeader>
         <CardContent>
-          {expenseByCategory.length === 0 ? (
+          {!expenseByCategory || expenseByCategory.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               尚無支出記錄
             </div>
@@ -89,7 +95,7 @@ export function ReportCharts({ yearlyTrend, expenseByCategory }: ReportChartsPro
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percentage }: any) => `${name} (${percentage}%)`}
+                  label={({ name, percentage }: any) => `${name || "未知"} (${percentage || 0}%)`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -102,7 +108,7 @@ export function ReportCharts({ yearlyTrend, expenseByCategory }: ReportChartsPro
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => `NT$ ${Number(value).toLocaleString()}`}
+                  formatter={(value: any) => `NT$ ${Number(value || 0).toLocaleString()}`}
                 />
               </PieChart>
             </ResponsiveContainer>

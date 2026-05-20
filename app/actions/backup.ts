@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { transactions, accounts, categories } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
@@ -11,32 +12,36 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 /**
- * 匯出所有交易記錄為 CSV 格式
+ * 匯出所有交易記錄為 CSV 格式（使用名稱而非 ID）
  */
 export async function exportTransactionsCSV() {
   try {
-    // 查詢所有交易記錄
+    // 查詢所有交易記錄（含帳戶與分類名稱）
     const allTransactions = await db
       .select({
         id: transactions.id,
         transactionDate: transactions.transactionDate,
         amount: transactions.amount,
         type: transactions.type,
-        accountId: transactions.accountId,
-        categoryId: transactions.categoryId,
+        accountName: accounts.name,
+        categoryName: categories.name,
         memo: transactions.memo,
       })
       .from(transactions)
+      .leftJoin(accounts, eq(transactions.accountId, accounts.id))
+      .leftJoin(categories, eq(transactions.categoryId, categories.id))
       .orderBy(transactions.transactionDate);
 
     // 建立 CSV 標題
-    const header = "id,transactionDate,amount,type,accountId,categoryId,memo\n";
+    const header = "id,transactionDate,amount,type,accountName,categoryName,memo\n";
 
     // 建立 CSV 內容
     const rows = allTransactions
       .map((row) => {
         const memo = row.memo ? `"${row.memo.replace(/"/g, '""')}"` : "";
-        return `${row.id},${row.transactionDate},${row.amount},${row.type},${row.accountId},${row.categoryId},${memo}`;
+        const accountName = row.accountName || "";
+        const categoryName = row.categoryName || "";
+        return `${row.id},${row.transactionDate},${row.amount},${row.type},"${accountName}","${categoryName}",${memo}`;
       })
       .join("\n");
 
@@ -57,7 +62,7 @@ export async function exportTransactionsCSV() {
 }
 
 /**
- * 匯入 CSV 交易記錄
+ * 匯入 CSV 交易記錄（自動創建缺失的帳戶和分類）
  */
 export async function importTransactionsCSV(csvContent: string) {
   try {
@@ -73,14 +78,21 @@ export async function importTransactionsCSV(csvContent: string) {
     // 跳過標題行
     const dataLines = lines.slice(1);
 
-    // 驗證帳戶和分類是否存在
-    const allAccounts = await db.select({ id: accounts.id }).from(accounts);
-    const allCategories = await db.select({ id: categories.id }).from(categories);
-    const accountIds = new Set(allAccounts.map((a) => a.id));
-    const categoryIds = new Set(allCategories.map((c) => c.id));
+    // 建立帳戶和分類的名稱到 ID 的對應表
+    const accountMap = new Map<string, number>();
+    const categoryMap = new Map<string, number>();
+
+    // 載入現有帳戶和分類
+    const existingAccounts = await db.select().from(accounts);
+    const existingCategories = await db.select().from(categories);
+
+    existingAccounts.forEach((acc) => accountMap.set(acc.name, acc.id));
+    existingCategories.forEach((cat) => categoryMap.set(cat.name, cat.id));
 
     const recordsToImport = [];
     const errors: string[] = [];
+    const createdAccounts: string[] = [];
+    const createdCategories: string[] = [];
 
     for (let i = 0; i < dataLines.length; i++) {
       const line = dataLines[i].trim();
@@ -110,10 +122,15 @@ export async function importTransactionsCSV(csvContent: string) {
           continue;
         }
 
-        const [_id, transactionDate, amount, type, accountId, categoryId, memo] = parts;
+        const [_id, transactionDate, amount, type, accountName, categoryName, memo] = parts;
+
+        // 移除引號
+        const cleanAccountName = accountName.replace(/^"|"$/g, "").trim();
+        const cleanCategoryName = categoryName.replace(/^"|"$/g, "").trim();
+        const cleanMemo = memo.replace(/^"|"$/g, "").trim();
 
         // 驗證資料
-        if (!transactionDate || !amount || !type || !accountId || !categoryId) {
+        if (!transactionDate || !amount || !type || !cleanAccountName || !cleanCategoryName) {
           errors.push(`第 ${i + 2} 行：必填欄位缺失`);
           continue;
         }
@@ -123,29 +140,48 @@ export async function importTransactionsCSV(csvContent: string) {
           continue;
         }
 
-        const accountIdNum = parseInt(accountId);
-        const categoryIdNum = parseInt(categoryId);
-
-        if (!accountIds.has(accountIdNum)) {
-          errors.push(`第 ${i + 2} 行：帳戶 ID ${accountId} 不存在`);
-          continue;
+        // 檢查並自動創建帳戶
+        let accountId = accountMap.get(cleanAccountName);
+        if (!accountId) {
+          const [newAccount] = await db
+            .insert(accounts)
+            .values({
+              name: cleanAccountName,
+              type: "銀行", // 預設類型
+              isActive: true,
+            })
+            .returning({ id: accounts.id });
+          accountId = newAccount.id;
+          accountMap.set(cleanAccountName, accountId);
+          createdAccounts.push(cleanAccountName);
         }
 
-        if (!categoryIds.has(categoryIdNum)) {
-          errors.push(`第 ${i + 2} 行：分類 ID ${categoryId} 不存在`);
-          continue;
+        // 檢查並自動創建分類
+        let categoryId = categoryMap.get(cleanCategoryName);
+        if (!categoryId) {
+          const [newCategory] = await db
+            .insert(categories)
+            .values({
+              name: cleanCategoryName,
+              type: type as "收入" | "支出",
+              parentId: null,
+            })
+            .returning({ id: categories.id });
+          categoryId = newCategory.id;
+          categoryMap.set(cleanCategoryName, categoryId);
+          createdCategories.push(cleanCategoryName);
         }
 
         recordsToImport.push({
           transactionDate,
           amount,
           type: type as "收入" | "支出",
-          accountId: accountIdNum,
-          categoryId: categoryIdNum,
-          memo: memo || null,
+          accountId,
+          categoryId,
+          memo: cleanMemo || null,
         });
       } catch (error) {
-        errors.push(`第 ${i + 2} 行：解析錯誤`);
+        errors.push(`第 ${i + 2} 行：解析錯誤 - ${error}`);
       }
     }
 
@@ -166,9 +202,18 @@ export async function importTransactionsCSV(csvContent: string) {
     revalidatePath("/");
     revalidatePath("/reports");
 
+    let message = `成功匯入 ${recordsToImport.length} 筆交易記錄`;
+    if (createdAccounts.length > 0) {
+      message += `\n自動創建 ${createdAccounts.length} 個帳戶：${createdAccounts.slice(0, 3).join(", ")}${createdAccounts.length > 3 ? "..." : ""}`;
+    }
+    if (createdCategories.length > 0) {
+      message += `\n自動創建 ${createdCategories.length} 個分類：${createdCategories.slice(0, 3).join(", ")}${createdCategories.length > 3 ? "..." : ""}`;
+    }
+
     return {
       success: true,
       importedCount: recordsToImport.length,
+      message,
     };
   } catch (error) {
     console.error("importTransactionsCSV error:", error);

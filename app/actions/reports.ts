@@ -61,7 +61,7 @@ export async function getMonthSummary(year: number, month: number) {
   let totalExpense = new Decimal(0);
 
   for (const t of monthTransactions) {
-    const amount = new Decimal(t.amount);
+    const amount = new Decimal(t.amount || "0");
     if (t.type === "收入") {
       totalIncome = totalIncome.plus(amount);
     } else if (t.type === "支出") {
@@ -73,7 +73,7 @@ export async function getMonthSummary(year: number, month: number) {
     totalIncome: totalIncome.toFixed(2),
     totalExpense: totalExpense.toFixed(2),
     netWorth: totalIncome.minus(totalExpense).toFixed(2),
-    transactionCount: monthTransactions.length,
+    transactionCount: monthTransactions.length || 0,
   };
 }
 
@@ -95,7 +95,7 @@ export async function getYearSummary(year: number) {
   let totalExpense = new Decimal(0);
 
   for (const t of yearTransactions) {
-    const amount = new Decimal(t.amount);
+    const amount = new Decimal(t.amount || "0");
     if (t.type === "收入") {
       totalIncome = totalIncome.plus(amount);
     } else if (t.type === "支出") {
@@ -107,7 +107,7 @@ export async function getYearSummary(year: number) {
     totalIncome: totalIncome.toFixed(2),
     totalExpense: totalExpense.toFixed(2),
     netWorth: totalIncome.minus(totalExpense).toFixed(2),
-    transactionCount: yearTransactions.length,
+    transactionCount: yearTransactions.length || 0,
   };
 }
 
@@ -121,7 +121,7 @@ export async function getYearlyTrend(year: number) {
     .select({
       month: sql<string>`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`,
       type: transactions.type,
-      total: sql<string>`SUM(${transactions.amount})`,
+      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
     })
     .from(transactions)
     .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)))
@@ -140,9 +140,9 @@ export async function getYearlyTrend(year: number) {
     }
     const entry = monthMap.get(row.month)!;
     if (row.type === "收入") {
-      entry.income = row.total;
+      entry.income = row.total || "0";
     } else if (row.type === "支出") {
-      entry.expense = row.total;
+      entry.expense = row.total || "0";
     }
   }
 
@@ -158,7 +158,7 @@ export async function getYearlyExpenseByCategory(year: number) {
   const categoryData = await db
     .select({
       categoryName: sql<string>`c.name`,
-      total: sql<string>`SUM(t.amount)`,
+      total: sql<string>`COALESCE(SUM(t.amount), 0)`,
     })
     .from(transactions)
     .innerJoin(sql`categories c`, sql`c.id = ${transactions.categoryId}`)
@@ -170,25 +170,30 @@ export async function getYearlyExpenseByCategory(year: number) {
       )
     )
     .groupBy(sql`c.name`)
-    .orderBy(sql`SUM(t.amount) DESC`);
+    .orderBy(sql`COALESCE(SUM(t.amount), 0) DESC`);
+
+  // 如果沒有資料，回傳空陣列
+  if (!categoryData || categoryData.length === 0) {
+    return [];
+  }
 
   // 計算總支出
   let totalExpense = new Decimal(0);
   for (const row of categoryData) {
-    totalExpense = totalExpense.plus(row.total);
+    totalExpense = totalExpense.plus(row.total || "0");
   }
 
   // 計算百分比
   return categoryData.map((row) => {
-    const amount = new Decimal(row.total);
+    const amount = new Decimal(row.total || "0");
     const percentage =
       totalExpense.toNumber() > 0
         ? amount.dividedBy(totalExpense).times(100).toFixed(1)
         : "0";
 
     return {
-      name: row.categoryName,
-      value: parseFloat(row.total),
+      name: row.categoryName || "未知",
+      value: parseFloat(row.total || "0"),
       percentage,
     };
   });

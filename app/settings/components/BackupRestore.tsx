@@ -54,7 +54,7 @@ export function BackupRestore() {
       if (result.success) {
         setMessage({
           type: "success",
-          text: `成功匯入 ${result.importedCount} 筆交易記錄！`,
+          text: result.message || `成功匯入 ${result.importedCount} 筆交易記錄！`,
         });
       } else {
         setMessage({ type: "error", text: result.error || "匯入失敗" });
@@ -121,10 +121,10 @@ export function BackupRestore() {
             <strong>注意事項：</strong>
           </p>
           <ul className="list-disc list-inside space-y-1">
-            <li>匯出的 CSV 包含所有交易記錄</li>
-            <li>匯入時會自動驗證帳戶和分類是否存在</li>
+            <li>匯出的 CSV 包含所有交易記錄（使用帳戶和分類名稱）</li>
+            <li>匯入時會自動創建不存在的帳戶和分類</li>
             <li>匯入不會刪除現有資料，只會新增記錄</li>
-            <li>CSV 格式：id, transactionDate, amount, type, accountId, categoryId, memo</li>
+            <li>CSV 格式：id, transactionDate, amount, type, accountName, categoryName, memo</li>
           </ul>
         </div>
       </CardContent>
