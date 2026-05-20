@@ -30,7 +30,7 @@ export async function getCategories(): Promise<CategoryWithChildren[]> {
     children: subCategories.filter((sub) => sub.parentId === main.id),
   }));
 
-  return result;
+  return result as CategoryWithChildren[];
 }
 
 /**
@@ -52,7 +52,7 @@ export async function getCategoriesByType(type: "支出" | "收入"): Promise<Ca
     children: subCategories.filter((sub) => sub.parentId === main.id),
   }));
 
-  return result;
+  return result as CategoryWithChildren[];
 }
 
 /**
