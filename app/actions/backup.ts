@@ -69,21 +69,25 @@ export async function exportTransactionsCSV() {
  */
 export async function importTransactionsCSV(csvContent: string) {
   try {
-    // 使用 PapaParse 解析 CSV
+    // 使用 PapaParse 解析 CSV，加入容錯參數
     const parseResult = Papa.parse(csvContent, {
       header: false,
       skipEmptyLines: true,
+      quoteChar: '"',
+      escapeChar: '"',
+      // 關鍵：不要因為個別行錯誤就中斷解析
+      error: (error) => {
+        console.warn("PapaParse 警告:", error);
+      },
     });
 
-    if (parseResult.errors.length > 0) {
-      console.error("CSV 解析錯誤:", parseResult.errors);
-      return {
-        success: false,
-        error: `CSV 解析錯誤：${parseResult.errors[0].message}`,
-      };
-    }
-
     const rows = parseResult.data as string[][];
+    const parseErrors = parseResult.errors || [];
+
+    // 記錄解析錯誤但不中斷
+    if (parseErrors.length > 0) {
+      console.warn(`CSV 解析時發現 ${parseErrors.length} 個錯誤，將略過錯誤行並繼續處理正確資料`);
+    }
 
     if (rows.length < 2) {
       return {
@@ -111,16 +115,16 @@ export async function importTransactionsCSV(csvContent: string) {
     existingCategories.forEach((cat) => categoryMap.set(cat.name, cat.id));
 
     const recordsToImport = [];
-    const errors: string[] = [];
+    const skippedRows: string[] = [];
     const createdAccounts: string[] = [];
     const createdCategories: string[] = [];
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i];
 
-      // 確保該行有足夠的欄位
+      // 確保該行有足夠的欄位 - 改為略過而非累積錯誤
       if (!row || row.length < 14) {
-        errors.push(`第 ${i + 2} 行：欄位數量不足（需要至少 14 個欄位）`);
+        skippedRows.push(`第 ${i + 2} 行：欄位數量不足`);
         continue;
       }
 
@@ -135,14 +139,14 @@ export async function importTransactionsCSV(csvContent: string) {
         // 極度重要：遇到轉帳或無分類時，強制設為"未分類"
         const cleanCategoryName = rawCategory || "未分類";
 
-        // 驗證資料
+        // 驗證資料 - 改為略過而非累積錯誤
         if (!transactionDate || !amount || !type || !cleanAccountName) {
-          errors.push(`第 ${i + 2} 行：必填欄位缺失`);
+          skippedRows.push(`第 ${i + 2} 行：必填欄位缺失`);
           continue;
         }
 
         if (type !== "收入" && type !== "支出") {
-          errors.push(`第 ${i + 2} 行：類型必須是「收入」或「支出」`);
+          skippedRows.push(`第 ${i + 2} 行：類型必須是「收入」或「支出」`);
           continue;
         }
 
@@ -187,15 +191,15 @@ export async function importTransactionsCSV(csvContent: string) {
           memo: cleanMemo || null,
         });
       } catch (error) {
-        errors.push(`第 ${i + 2} 行：解析錯誤 - ${error}`);
+        skippedRows.push(`第 ${i + 2} 行：解析錯誤 - ${error}`);
       }
     }
 
-    // 如果有錯誤，返回錯誤訊息
-    if (errors.length > 0) {
+    // 改為 graceful degradation：只要有成功的資料就繼續匯入
+    if (recordsToImport.length === 0) {
       return {
         success: false,
-        error: `匯入失敗，發現 ${errors.length} 個錯誤：\n${errors.slice(0, 5).join("\n")}${errors.length > 5 ? "\n..." : ""}`,
+        error: `匯入失敗，所有資料行都無法解析。略過的行數：${skippedRows.length}`,
       };
     }
 
@@ -208,7 +212,13 @@ export async function importTransactionsCSV(csvContent: string) {
     revalidatePath("/");
     revalidatePath("/reports");
 
+    // 建立詳細的回報訊息
     let message = `成功匯入 ${recordsToImport.length} 筆交易記錄`;
+
+    if (skippedRows.length > 0) {
+      message += `。有 ${skippedRows.length} 筆因為格式異常被略過`;
+    }
+
     if (createdAccounts.length > 0) {
       message += `\n自動創建 ${createdAccounts.length} 個帳戶：${createdAccounts.slice(0, 3).join(", ")}${createdAccounts.length > 3 ? "..." : ""}`;
     }
@@ -219,6 +229,7 @@ export async function importTransactionsCSV(csvContent: string) {
     return {
       success: true,
       importedCount: recordsToImport.length,
+      skippedCount: skippedRows.length,
       message,
     };
   } catch (error) {
