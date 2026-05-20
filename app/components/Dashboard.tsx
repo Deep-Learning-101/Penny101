@@ -53,7 +53,7 @@ export async function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              總收入
+              本月收入
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
@@ -68,7 +68,7 @@ export async function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              總支出
+              本月支出
             </CardTitle>
             <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
@@ -79,22 +79,25 @@ export async function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* 淨資產 */}
+        {/* 總資產 */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              淨資產
+              總資產
             </CardTitle>
             <Wallet className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div
               className={`text-3xl font-bold ${
-                Number(stats.netWorth) >= 0 ? "text-blue-600" : "text-orange-600"
+                Number(stats.totalAssets) >= 0 ? "text-blue-600" : "text-orange-600"
               }`}
             >
-              NT$ {Number(stats.netWorth).toLocaleString()}
+              NT$ {Number(stats.totalAssets).toLocaleString()}
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              所有帳戶餘額總和
+            </p>
           </CardContent>
         </Card>
       </div>

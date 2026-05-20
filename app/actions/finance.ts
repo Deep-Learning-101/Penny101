@@ -29,7 +29,7 @@ function getMonthRange(year: number, month: number) {
 }
 
 /**
- * 1. getDashboardStats - 取得當月總收支與淨資產
+ * 1. getDashboardStats - 取得當月總收支與總資產
  */
 export async function getDashboardStats(year: number, month: number) {
   const { start, end } = getMonthRange(year, month);
@@ -63,13 +63,49 @@ export async function getDashboardStats(year: number, month: number) {
     }
   }
 
-  // 計算淨資產（收入 - 支出）
-  const netWorth = totalIncome.minus(totalExpense);
+  // 計算總資產（所有帳戶餘額總和，包含初始餘額）
+  // 只計算 includeInTotal = true 的帳戶
+  const allAccounts = await db
+    .select({
+      id: accounts.id,
+      initialBalance: accounts.initialBalance,
+      includeInTotal: accounts.includeInTotal,
+    })
+    .from(accounts)
+    .where(eq(accounts.includeInTotal, true));
+
+  let totalAssets = new Decimal(0);
+
+  for (const account of allAccounts) {
+    // 初始餘額
+    const initialBalance = new Decimal(account.initialBalance || "0");
+
+    // 該帳戶的所有交易
+    const accountTransactions = await db
+      .select({
+        amount: transactions.amount,
+        type: transactions.type,
+      })
+      .from(transactions)
+      .where(eq(transactions.accountId, account.id));
+
+    let accountBalance = initialBalance;
+    for (const t of accountTransactions) {
+      const amount = new Decimal(t.amount);
+      if (t.type === "收入") {
+        accountBalance = accountBalance.plus(amount);
+      } else if (t.type === "支出") {
+        accountBalance = accountBalance.minus(amount);
+      }
+    }
+
+    totalAssets = totalAssets.plus(accountBalance);
+  }
 
   return {
     totalIncome: totalIncome.toFixed(2),
     totalExpense: totalExpense.toFixed(2),
-    netWorth: netWorth.toFixed(2),
+    totalAssets: totalAssets.toFixed(2),
   };
 }
 
