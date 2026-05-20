@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { PlusCircle } from "lucide-react";
 import { getActiveAccounts } from "@/app/actions/accounts";
-import { getCategoriesByType } from "@/app/actions/categories";
+import { getCategoriesByType, type CategoryWithChildren } from "@/app/actions/categories";
 import { addTransaction } from "@/app/actions/finance";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
@@ -35,14 +35,6 @@ interface Account {
   id: number;
   name: string;
   type: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-  type: string;
-  parentId: number | null;
-  children?: Category[];
 }
 
 export function AddTransactionFAB() {
@@ -64,8 +56,8 @@ export function AddTransactionFAB() {
 
   // 下拉選單資料
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
+  const [subCategories, setSubCategories] = useState<CategoryWithChildren[]>([]);
 
   // 載入帳戶資料
   useEffect(() => {

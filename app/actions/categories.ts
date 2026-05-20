@@ -4,10 +4,21 @@ import { db } from "@/db";
 import { categories, transactions } from "@/db/schema";
 import { eq, and, isNull, count } from "drizzle-orm";
 
+// 定義 Category 型別（含 children）
+export type CategoryWithChildren = {
+  id: number;
+  name: string;
+  type: "支出" | "收入";
+  parentId: number | null;
+  createdAt: string;
+  updatedAt: string;
+  children?: CategoryWithChildren[];
+};
+
 /**
  * 取得所有分類（含階層結構）
  */
-export async function getCategories() {
+export async function getCategories(): Promise<CategoryWithChildren[]> {
   const allCategories = await db.select().from(categories).orderBy(categories.type, categories.name);
 
   // 組織成主分類與子分類的階層結構
@@ -25,7 +36,7 @@ export async function getCategories() {
 /**
  * 取得指定類型的分類（支出或收入）
  */
-export async function getCategoriesByType(type: "支出" | "收入") {
+export async function getCategoriesByType(type: "支出" | "收入"): Promise<CategoryWithChildren[]> {
   const filteredCategories = await db
     .select()
     .from(categories)
