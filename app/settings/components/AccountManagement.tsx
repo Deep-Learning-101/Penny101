@@ -116,6 +116,11 @@ export function AccountManagement() {
     if (result.success) {
       setDialogOpen(false);
       loadAccounts();
+
+      // 如果是編輯帳戶且修改了初始餘額，提示使用者餘額已更新
+      if (editingAccount && formData.initialBalance !== editingAccount.initialBalance) {
+        alert("初始餘額已更新，帳戶餘額將自動重新計算。");
+      }
     } else {
       alert(result.error);
     }
@@ -359,8 +364,13 @@ export function AccountManagement() {
                 placeholder="0"
               />
               <p className="text-xs text-muted-foreground">
-                設定此帳戶的起始金額（例如：從其他系統遷移時的現有餘額）
+                設定此帳戶的起始金額（可以是正數或負數，例如：信用卡負債可輸入負值）
               </p>
+              {editingAccount && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ 修改初始餘額後，帳戶餘額將自動重新計算
+                </p>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">

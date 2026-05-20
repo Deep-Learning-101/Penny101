@@ -31,8 +31,9 @@ export default async function AccountDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 計算餘額
-  let balance = new Decimal(0);
+  // 計算餘額 = 初始餘額 + 收入 - 支出
+  const initialBalance = new Decimal(account.initialBalance || "0");
+  let balance = initialBalance;
   for (const t of transactions) {
     const amount = new Decimal(t.amount || "0");
     if (t.type === "收入") {
@@ -75,7 +76,13 @@ export default async function AccountDetailPage({ params }: PageProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">初始餘額</p>
+              <p className="text-lg font-semibold text-muted-foreground">
+                NT$ {initialBalance.toNumber().toLocaleString()}
+              </p>
+            </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1">目前餘額</p>
               <p
