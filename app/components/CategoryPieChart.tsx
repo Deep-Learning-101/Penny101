@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { SmartPieChart } from "./SmartPieChart";
 
 interface CategoryData {
   categoryId: number;
@@ -8,17 +8,6 @@ interface CategoryData {
   amount: string;
   percentage: string;
 }
-
-const COLORS = [
-  "#3b82f6", // blue
-  "#10b981", // green
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#f97316", // orange
-];
 
 export function CategoryPieChart({ data }: { data: CategoryData[] }) {
   if (data.length === 0) {
@@ -29,35 +18,12 @@ export function CategoryPieChart({ data }: { data: CategoryData[] }) {
     );
   }
 
-  // 轉換資料格式給 recharts
+  // 轉換資料格式給 SmartPieChart
   const chartData = data.map((item) => ({
     name: item.categoryName,
     value: Number(item.amount),
     percentage: item.percentage,
   }));
 
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          label={({ name, percentage }: any) => `${name} (${percentage}%)`}
-          outerRadius={80}
-          fill="#8884d8"
-          dataKey="value"
-        >
-          {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          formatter={(value: number) => `NT$ ${value.toLocaleString()}`}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  );
+  return <SmartPieChart data={chartData} height={300} mergeThreshold={5.0} />;
 }

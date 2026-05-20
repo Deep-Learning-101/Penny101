@@ -11,14 +11,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
 } from "recharts";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
+import { SmartPieChart } from "./SmartPieChart";
 
 interface YearlyTrendData {
   month: string;
@@ -157,30 +153,7 @@ export function ReportCharts({
               該月份尚無支出記錄
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={monthlyExpenseByCategory}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }: any) => `${name || "未知"} (${percentage || 0}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {monthlyExpenseByCategory.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: any) => `NT$ ${Number(value || 0).toLocaleString()}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <SmartPieChart data={monthlyExpenseByCategory} height={300} mergeThreshold={5.0} />
           )}
         </CardContent>
       </Card>
@@ -224,30 +197,7 @@ export function ReportCharts({
               該年度尚無支出記錄
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={expenseByCategory}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }: any) => `${name || "未知"} (${percentage || 0}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {expenseByCategory.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: any) => `NT$ ${Number(value || 0).toLocaleString()}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <SmartPieChart data={expenseByCategory} height={300} mergeThreshold={5.0} />
           )}
         </CardContent>
       </Card>
