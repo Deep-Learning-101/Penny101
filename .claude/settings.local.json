@@ -4,7 +4,9 @@
       "Bash(npx tsc *)",
       "Bash(npx *)",
       "Bash(npm run *)",
-      "Bash(node -e \"const Papa = require\\('papaparse'\\); console.log\\('PapaParse version:', Papa.version || 'loaded'\\);\")"
+      "Bash(node -e \"const Papa = require\\('papaparse'\\); console.log\\('PapaParse version:', Papa.version || 'loaded'\\);\")",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
