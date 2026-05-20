@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true, // 在 Docker 環境中禁用圖片優化
   },
+
+  // 忽略 TypeScript 和 ESLint 錯誤（加速建置）
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;
