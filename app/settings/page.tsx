@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CategoryManagement } from "./components/CategoryManagement";
 import { AccountManagement } from "./components/AccountManagement";
+import { BackupRestore } from "./components/BackupRestore";
 
 // 強制動態渲染，避免 Build 時連接資料庫
 export const dynamic = "force-dynamic";
@@ -15,9 +16,10 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="categories" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="categories">分類管理</TabsTrigger>
           <TabsTrigger value="accounts">帳戶管理</TabsTrigger>
+          <TabsTrigger value="backup">資料備份</TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories" className="mt-6">
@@ -46,6 +48,10 @@ export default function SettingsPage() {
               <AccountManagement />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="backup" className="mt-6">
+          <BackupRestore />
         </TabsContent>
       </Tabs>
     </div>
