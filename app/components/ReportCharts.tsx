@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   LineChart,
@@ -35,6 +36,18 @@ interface ReportChartsProps {
 }
 
 export function ReportCharts({ yearlyTrend, expenseByCategory }: ReportChartsProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="py-8 text-center text-muted-foreground">載入圖表中...</div>
+    );
+  }
+
   return (
     <>
       {/* 收支趨勢折線圖 */}
