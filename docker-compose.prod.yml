@@ -30,6 +30,21 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # 資料庫 Migration 服務
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    environment:
+      - DATABASE_URL=postgresql://penny101:${POSTGRES_PASSWORD}@db:5432/penny101
+    command: npx drizzle-kit push
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - penny101-network
+
   # Next.js Web 應用（生產環境）
   web:
     build:
