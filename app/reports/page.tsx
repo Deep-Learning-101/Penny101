@@ -1,3 +1,4 @@
+import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Wallet, Calendar } from "lucide-react";
 import {
@@ -6,7 +7,6 @@ import {
   getYearlyTrend,
   getYearlyExpenseByCategory,
 } from "@/app/actions/reports";
-import { ReportCharts } from "@/app/components/ReportCharts";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
@@ -16,6 +16,17 @@ dayjs.extend(timezone);
 
 // 強制動態渲染
 export const dynamic = "force-dynamic";
+
+// 動態載入圖表組件，關閉 SSR 避免 recharts 崩潰
+const ReportCharts = dynamic(
+  () => import("@/app/components/ReportCharts").then((mod) => mod.ReportCharts),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="py-8 text-center text-muted-foreground">載入圖表中...</div>
+    ),
+  }
+);
 
 export default async function ReportsPage() {
   const now = dayjs().tz("Asia/Taipei");

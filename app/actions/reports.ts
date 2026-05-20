@@ -157,20 +157,20 @@ export async function getYearlyExpenseByCategory(year: number) {
 
   const categoryData = await db
     .select({
-      categoryName: sql<string>`c.name`,
-      total: sql<string>`COALESCE(SUM(t.amount), 0)`,
+      categoryName: categories.name,
+      total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
     })
     .from(transactions)
-    .innerJoin(sql`categories c`, sql`c.id = ${transactions.categoryId}`)
+    .innerJoin(categories, eq(transactions.categoryId, categories.id))
     .where(
       and(
         gte(transactions.transactionDate, start),
         lt(transactions.transactionDate, end),
-        sql`${transactions.type} = '支出'`
+        eq(transactions.type, "支出")
       )
     )
-    .groupBy(sql`c.name`)
-    .orderBy(sql`COALESCE(SUM(t.amount), 0) DESC`);
+    .groupBy(categories.name)
+    .orderBy(sql`COALESCE(SUM(${transactions.amount}), 0) DESC`);
 
   // 如果沒有資料，回傳空陣列
   if (!categoryData || categoryData.length === 0) {
