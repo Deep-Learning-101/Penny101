@@ -24,8 +24,8 @@ COPY . .
 # 設定環境變數（建置時需要）
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# 建置 Next.js 應用
-RUN npm run build
+# 建置 Next.js 應用（提供假的 DATABASE_URL 通過建置檢查）
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npm run build
 
 # ============================================
 # Stage 3: Runner
