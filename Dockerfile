@@ -5,11 +5,11 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# 複製 package.json 和 package-lock.json
-COPY package.json package-lock.json* ./
+# 複製 package.json
+COPY package.json ./
 
-# 安裝依賴（使用 --legacy-peer-deps 解決 peer dependency 問題）
-RUN npm ci --legacy-peer-deps
+# 安裝依賴（使用 npm install 而非 npm ci，避免 package-lock.json 檢查問題）
+RUN npm install --legacy-peer-deps
 
 # ============================================
 # Stage 2: Builder
