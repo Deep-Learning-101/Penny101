@@ -11,7 +11,8 @@ interface ChartDataItem {
 interface SmartPieChartProps {
   data: ChartDataItem[];
   height?: number;
-  mergeThreshold?: number; // 合併閾值（百分比），預設 5%
+  mergeThreshold?: number; // 合併閾值（百分比），預設 3%
+  topN?: number; // 保留前 N 大分類（無論佔比），預設 6
 }
 
 const COLORS = [
@@ -88,7 +89,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function SmartPieChart({ data, height = 300, mergeThreshold = 5.0 }: SmartPieChartProps) {
+export function SmartPieChart({ data, height = 300, mergeThreshold = 3.0, topN = 6 }: SmartPieChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-[300px] text-muted-foreground">
@@ -97,11 +98,19 @@ export function SmartPieChart({ data, height = 300, mergeThreshold = 5.0 }: Smar
     );
   }
 
-  // 分離主要分類和小分類
-  const majorCategories: ChartDataItem[] = [];
+  // 新策略：保留前 N 大分類（無論佔比） + 其餘依閾值判斷
+  // 這樣即使有大額支出（如房租），其他分類也能顯示
+
+  // 步驟 1: 按金額排序，取前 topN 個
+  const sortedData = [...data].sort((a, b) => b.value - a.value);
+  const topCategories = sortedData.slice(0, topN);
+  const remainingCategories = sortedData.slice(topN);
+
+  // 步驟 2: 剩餘的分類中，佔比 >= 閾值的也保留
+  const majorCategories: ChartDataItem[] = [...topCategories];
   const minorCategories: ChartDataItem[] = [];
 
-  data.forEach((item) => {
+  remainingCategories.forEach((item) => {
     if (parseFloat(item.percentage) >= mergeThreshold) {
       majorCategories.push(item);
     } else {
@@ -120,14 +129,16 @@ export function SmartPieChart({ data, height = 300, mergeThreshold = 5.0 }: Smar
     othersDetails.push(`${item.name}: ${item.percentage}%`);
   });
 
-  // 建立圖表資料
-  const chartData = majorCategories.map((item) => ({
-    name: item.name,
-    value: item.value,
-    percentage: item.percentage,
-    isOthers: false,
-    details: null,
-  }));
+  // 建立圖表資料（保持原始排序）
+  const chartData = majorCategories
+    .sort((a, b) => b.value - a.value) // 按金額降序
+    .map((item) => ({
+      name: item.name,
+      value: item.value,
+      percentage: item.percentage,
+      isOthers: false,
+      details: null,
+    }));
 
   // 如果有小分類，加入「其他」項目
   if (minorCategories.length > 0) {

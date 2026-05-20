@@ -25,5 +25,5 @@ export function CategoryPieChart({ data }: { data: CategoryData[] }) {
     percentage: item.percentage,
   }));
 
-  return <SmartPieChart data={chartData} height={300} mergeThreshold={5.0} />;
+  return <SmartPieChart data={chartData} height={300} mergeThreshold={3.0} topN={6} />;
 }

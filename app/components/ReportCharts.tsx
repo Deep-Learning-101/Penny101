@@ -153,7 +153,7 @@ export function ReportCharts({
               該月份尚無支出記錄
             </div>
           ) : (
-            <SmartPieChart data={monthlyExpenseByCategory} height={300} mergeThreshold={5.0} />
+            <SmartPieChart data={monthlyExpenseByCategory} height={300} mergeThreshold={3.0} topN={6} />
           )}
         </CardContent>
       </Card>
@@ -197,7 +197,7 @@ export function ReportCharts({
               該年度尚無支出記錄
             </div>
           ) : (
-            <SmartPieChart data={expenseByCategory} height={300} mergeThreshold={5.0} />
+            <SmartPieChart data={expenseByCategory} height={300} mergeThreshold={3.0} topN={6} />
           )}
         </CardContent>
       </Card>

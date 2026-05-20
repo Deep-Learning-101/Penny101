@@ -33,6 +33,8 @@ interface Account {
   name: string;
   type: "銀行" | "現金" | "電子支付";
   currency: string;
+  initialBalance?: string;
+  includeInTotal?: boolean;
   isActive: boolean;
 }
 
@@ -53,6 +55,8 @@ export function AccountManagement() {
     name: "",
     type: "銀行" as "銀行" | "現金" | "電子支付",
     currency: "TWD",
+    initialBalance: "0",
+    includeInTotal: true,
   });
 
   // 載入帳戶資料
@@ -74,6 +78,8 @@ export function AccountManagement() {
       name: "",
       type: "銀行",
       currency: "TWD",
+      initialBalance: "0",
+      includeInTotal: true,
     });
     setDialogOpen(true);
   };
@@ -85,6 +91,8 @@ export function AccountManagement() {
       name: account.name,
       type: account.type,
       currency: account.currency,
+      initialBalance: account.initialBalance || "0",
+      includeInTotal: account.includeInTotal ?? true,
     });
     setDialogOpen(true);
   };
@@ -338,6 +346,34 @@ export function AccountManagement() {
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 placeholder="TWD"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="initialBalance">初始餘額</Label>
+              <Input
+                id="initialBalance"
+                type="number"
+                step="0.01"
+                value={formData.initialBalance}
+                onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground">
+                設定此帳戶的起始金額（例如：從其他系統遷移時的現有餘額）
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                id="includeInTotal"
+                type="checkbox"
+                checked={formData.includeInTotal}
+                onChange={(e) => setFormData({ ...formData, includeInTotal: e.target.checked })}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="includeInTotal" className="cursor-pointer">
+                計入總資產統計
+              </Label>
             </div>
           </div>
 
