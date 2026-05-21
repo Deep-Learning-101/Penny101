@@ -34,7 +34,7 @@ function getMonthRange(year: number, month: number) {
 export async function getDashboardStats(year: number, month: number) {
   const { start, end } = getMonthRange(year, month);
 
-  // 查詢當月所有交易（只計算 includeInStats = true 的交易）
+  // 查詢當月所有交易（排除轉帳交易，只計算 includeInStats = true 的交易）
   const monthTransactions = await db
     .select({
       amount: transactions.amount,
@@ -46,7 +46,8 @@ export async function getDashboardStats(year: number, month: number) {
       and(
         gte(transactions.transactionDate, start),
         lt(transactions.transactionDate, end),
-        eq(transactions.includeInStats, true)
+        eq(transactions.includeInStats, true),
+        eq(transactions.isTransfer, false) // 排除轉帳交易
       )
     );
 
@@ -115,7 +116,7 @@ export async function getDashboardStats(year: number, month: number) {
 export async function getMonthlyCategoryPie(year: number, month: number) {
   const { start, end } = getMonthRange(year, month);
 
-  // 查詢當月所有支出交易（含分類資訊）
+  // 查詢當月所有支出交易（含分類資訊，排除轉帳）
   const expenseTransactions = await db
     .select({
       amount: transactions.amount,
@@ -129,7 +130,8 @@ export async function getMonthlyCategoryPie(year: number, month: number) {
       and(
         gte(transactions.transactionDate, start),
         lt(transactions.transactionDate, end),
-        eq(transactions.type, "支出")
+        eq(transactions.type, "支出"),
+        eq(transactions.isTransfer, false) // 排除轉帳交易
       )
     );
 
@@ -196,7 +198,7 @@ export async function getMonthlyCategoryPie(year: number, month: number) {
 export async function getDailyTrend(year: number, month: number) {
   const { start, end } = getMonthRange(year, month);
 
-  // 查詢當月所有支出交易
+  // 查詢當月所有支出交易（排除轉帳）
   const expenseTransactions = await db
     .select({
       transactionDate: transactions.transactionDate,
@@ -207,7 +209,8 @@ export async function getDailyTrend(year: number, month: number) {
       and(
         gte(transactions.transactionDate, start),
         lt(transactions.transactionDate, end),
-        eq(transactions.type, "支出")
+        eq(transactions.type, "支出"),
+        eq(transactions.isTransfer, false) // 排除轉帳交易
       )
     );
 

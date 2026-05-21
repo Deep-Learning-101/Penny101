@@ -55,7 +55,13 @@ export async function getMonthSummary(year: number, month: number) {
       type: transactions.type,
     })
     .from(transactions)
-    .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)));
+    .where(
+      and(
+        gte(transactions.transactionDate, start),
+        lt(transactions.transactionDate, end),
+        eq(transactions.isTransfer, false) // 排除轉帳交易
+      )
+    );
 
   let totalIncome = new Decimal(0);
   let totalExpense = new Decimal(0);
@@ -89,7 +95,13 @@ export async function getYearSummary(year: number) {
       type: transactions.type,
     })
     .from(transactions)
-    .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)));
+    .where(
+      and(
+        gte(transactions.transactionDate, start),
+        lt(transactions.transactionDate, end),
+        eq(transactions.isTransfer, false) // 排除轉帳交易
+      )
+    );
 
   let totalIncome = new Decimal(0);
   let totalExpense = new Decimal(0);
@@ -125,7 +137,13 @@ export async function getYearlyTrend(year: number) {
         total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
       })
       .from(transactions)
-      .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)))
+      .where(
+        and(
+          gte(transactions.transactionDate, start),
+          lt(transactions.transactionDate, end),
+          eq(transactions.isTransfer, false) // 排除轉帳交易
+        )
+      )
       .groupBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`, transactions.type)
       .orderBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`);
 
@@ -173,7 +191,8 @@ export async function getYearlyExpenseByCategory(year: number) {
         and(
           gte(transactions.transactionDate, start),
           lt(transactions.transactionDate, end),
-          eq(transactions.type, "支出")
+          eq(transactions.type, "支出"),
+          eq(transactions.isTransfer, false) // 排除轉帳交易
         )
       )
       .groupBy(categories.name)
@@ -228,7 +247,8 @@ export async function getMonthlyExpenseByCategory(year: number, month: number) {
         and(
           gte(transactions.transactionDate, start),
           lt(transactions.transactionDate, end),
-          eq(transactions.type, "支出")
+          eq(transactions.type, "支出"),
+          eq(transactions.isTransfer, false) // 排除轉帳交易
         )
       )
       .groupBy(categories.name)
@@ -283,7 +303,8 @@ export async function getMonthlyTopExpenses(year: number, month: number) {
         and(
           gte(transactions.transactionDate, start),
           lt(transactions.transactionDate, end),
-          eq(transactions.type, "支出")
+          eq(transactions.type, "支出"),
+          eq(transactions.isTransfer, false) // 排除轉帳交易
         )
       )
       .groupBy(categories.name)
@@ -314,7 +335,13 @@ export async function getYearlyMonthlyBalance(year: number) {
         total: sql<string>`COALESCE(SUM(${transactions.amount}), 0)`,
       })
       .from(transactions)
-      .where(and(gte(transactions.transactionDate, start), lt(transactions.transactionDate, end)))
+      .where(
+        and(
+          gte(transactions.transactionDate, start),
+          lt(transactions.transactionDate, end),
+          eq(transactions.isTransfer, false) // 排除轉帳交易
+        )
+      )
       .groupBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`, transactions.type)
       .orderBy(sql`TO_CHAR(${transactions.transactionDate}, 'YYYY-MM')`);
 

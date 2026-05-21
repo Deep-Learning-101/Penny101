@@ -1,5 +1,7 @@
 # 💰 Penny101
 
+![Penny101](./Penny101.jpg)
+
 > 100% 私有化、高精度、時區絕對準確的個人記帳系統
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -388,7 +390,7 @@ const date = dayjs().tz("Asia/Taipei"); // 永遠使用 UTC+8
 
 ## 📄 授權
 
-本專案採用 [ISC License](LICENSE)。
+本專案採用 [AGPL-3.0 license](LICENSE)。
 
 ---
 
@@ -399,13 +401,6 @@ const date = dayjs().tz("Asia/Taipei"); // 永遠使用 UTC+8
 - [Drizzle ORM](https://orm.drizzle.team/) - TypeScript ORM
 - [Recharts](https://recharts.org/) - 圖表庫
 - [decimal.js](https://github.com/MikeMcl/decimal.js/) - 高精度運算
-
----
-
-## 📬 聯絡方式
-
-- GitHub Issues: [提交問題](https://github.com/Deep-Learning-101/Penny101/issues)
-- Email: your-email@example.com（如果要公開）
 
 ---
 

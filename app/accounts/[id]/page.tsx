@@ -6,25 +6,32 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Wallet } from "lucide-react";
 import { getAccountInfo, getAccountTransactions } from "@/app/actions/accountsBalance";
 import Decimal from "decimal.js";
+import { TimeRangeSelector } from "./components/TimeRangeSelector";
 
 // 強制動態渲染
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ range?: string }>;
 }
 
-export default async function AccountDetailPage({ params }: PageProps) {
+export default async function AccountDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { range } = await searchParams;
   const accountId = parseInt(id);
 
   if (isNaN(accountId)) {
     notFound();
   }
 
+  // 驗證並設定時間範圍（預設 6 個月）
+  const validRanges = ['3m', '6m', '1y', 'all'] as const;
+  const timeRange = validRanges.includes(range as any) ? (range as typeof validRanges[number]) : '6m';
+
   const [account, transactions] = await Promise.all([
     getAccountInfo(accountId),
-    getAccountTransactions(accountId),
+    getAccountTransactions(accountId, timeRange),
   ]);
 
   if (!account) {
@@ -104,7 +111,10 @@ export default async function AccountDetailPage({ params }: PageProps) {
       {/* 交易明細列表 */}
       <Card>
         <CardHeader>
-          <CardTitle>交易明細</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>交易明細</CardTitle>
+            <TimeRangeSelector currentRange={timeRange} accountId={accountId} />
+          </div>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (

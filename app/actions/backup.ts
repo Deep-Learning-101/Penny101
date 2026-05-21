@@ -140,13 +140,14 @@ export async function importTransactionsCSV(csvContent: string) {
       }
 
       try {
-        // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 3=子分類, 4=帳戶, 6=金額, 13=備註）
+        // 嚴格按照外部 CSV 格式解析（index 0=日期, 1=類型, 2=主分類, 3=子分類, 4=帳戶, 6=金額, 12=轉帳, 13=備註）
         const rawDate = row[0]?.trim() || "";
         const type = row[1]?.trim() || "";
         const rawMainCategory = row[2]?.trim() || "";
         const rawSubCategory = row[3]?.trim() || "";
         const cleanAccountName = row[4]?.trim() || "";
         const rawAmount = row[6]?.trim() || "";
+        const rawIsTransfer = row[12]?.trim() || ""; // 第 12 欄：轉帳欄位
         const cleanMemo = row[13]?.trim() || "";
 
         // 決定主分類和子分類名稱
@@ -234,6 +235,9 @@ export async function importTransactionsCSV(csvContent: string) {
           categoryId = subCategoryId;
         }
 
+        // 判斷是否為轉帳交易
+        const isTransfer = rawIsTransfer === "是" || rawIsTransfer === "true" || rawIsTransfer === "1";
+
         recordsToImport.push({
           transactionDate,
           amount,
@@ -241,6 +245,7 @@ export async function importTransactionsCSV(csvContent: string) {
           accountId,
           categoryId,
           memo: cleanMemo || null,
+          isTransfer, // 新增轉帳標記
         });
       } catch (error) {
         skippedRows.push(`第 ${i + 2} 行：解析錯誤 - ${error}`);

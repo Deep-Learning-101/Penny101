@@ -12,10 +12,75 @@
 ### 規劃中
 - [ ] 使用者自訂圓餅圖合併閾值
 - [ ] 多幣別支援
-- [ ] 轉帳功能（帳戶間轉移）
 - [ ] 預算管理
 - [ ] 標籤系統
 - [ ] 匯出 PDF 報表
+
+---
+
+## [0.4.0] - 2026-05-21
+
+### Added (新增)
+- ✨ **轉帳功能隔離** ([#004](link))
+  - 新增 `is_transfer` 欄位於 transactions 表
+  - 轉帳交易不計入收支統計，但計入帳戶餘額計算
+  - CSV 匯入支援第 12 欄轉帳標記（「是」/「true」/「1」）
+  - 所有統計查詢已排除轉帳資料，避免數據失真
+
+- ✨ **帳戶手動排序功能** ([#004](link))
+  - 新增 `sort_order` 欄位於 accounts 表
+  - 帳戶列表支援上下箭頭調整排序
+  - 點擊後即時更新，自動刷新頁面
+  - 新增 `AccountSortButtons` 組件
+
+- ✨ **帳戶明細頁效能優化** ([#004](link))
+  - 預設只載入近 6 個月的交易記錄
+  - 新增時間範圍選擇器：3 個月、6 個月、1 年、全部
+  - 透過 URL 參數 `?range=6m` 控制
+  - 大幅提升大量交易帳戶的載入速度
+
+- ✨ **財務健康度看板** ([#004](link))
+  - 帳戶總覽頁新增「總淨資產 (Net Worth)」卡片
+  - 新增「淨負債 (Total Liabilities)」卡片
+  - 一眼掌握財務狀況（資產、負債）
+
+- ✨ **一鍵刷新帳戶餘額** ([#004](link))
+  - 帳戶頁面新增「刷新餘額」按鈕
+  - 重新計算所有帳戶餘額並驗證正確性
+  - 適用於資料遷移後的餘額核對
+
+### Changed (變更)
+- 🔧 **統計邏輯全面更新**
+  - getDashboardStats：排除轉帳交易
+  - getMonthlyCategoryPie：排除轉帳交易
+  - getDailyTrend：排除轉帳交易
+  - getMonthSummary：排除轉帳交易
+  - getYearSummary：排除轉帳交易
+  - getYearlyTrend：排除轉帳交易
+  - getYearlyExpenseByCategory：排除轉帳交易
+  - getMonthlyExpenseByCategory：排除轉帳交易
+  - getMonthlyTopExpenses：排除轉帳交易
+
+- 🔧 **帳戶餘額計算邏輯**
+  - 餘額 = initialBalance + 總收入 - 總支出（含轉帳）
+  - 統計 = 收入 - 支出（不含轉帳）
+
+### Fixed (修復)
+- 🐛 **修正轉帳導致收支失真問題**
+  - 轉帳交易不再計入總收入與總支出
+  - 報表數據更準確反映真實財務狀況
+
+### Database (資料庫)
+- 📦 **Schema 變更**
+  - `transactions` 新增 `is_transfer` 欄位（boolean, default: false）
+  - `accounts` 新增 `sort_order` 欄位（integer, default: 0）
+  - 新增索引：`idx_transactions_is_transfer`
+  - 新增索引：`idx_accounts_sort_order`
+
+### Performance (效能)
+- ⚡ **帳戶明細頁載入速度提升**
+  - 預設只查詢 6 個月內的交易
+  - 避免一次載入數千筆資料造成卡頓
 
 ---
 

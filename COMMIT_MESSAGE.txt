@@ -1,0 +1,62 @@
+feat: 架構重構 v0.4.0 - 轉帳隔離、帳戶排序、效能優化、財務看板
+
+五大核心功能重構與效能優化完成：
+
+1. ✨ 轉帳功能隔離（避免污染收支統計）
+   - 新增 transactions.is_transfer 欄位
+   - CSV 匯入支援第 12 欄轉帳標記
+   - 所有統計查詢排除轉帳資料
+   - 帳戶餘額計算仍包含轉帳
+
+2. ✨ 帳戶初始餘額與一鍵重新計算
+   - 餘額公式：initialBalance + 收入 - 支出
+   - 新增「刷新餘額」按鈕
+   - 新增 recalculateAllBalances() Server Action
+
+3. ⚡ 帳戶明細頁效能優化
+   - 預設只載入近 6 個月交易（80%+ 速度提升）
+   - 新增時間範圍選擇器（3m/6m/1y/all）
+   - 透過 URL 參數 ?range=6m 控制
+
+4. ✨ 帳戶手動排序功能
+   - 新增 accounts.sort_order 欄位
+   - 帳戶卡片右側顯示上下箭頭
+   - 新增 swapAccountOrder() Server Action
+
+5. 📊 財務健康度看板
+   - 帳戶總覽新增「總淨資產」卡片
+   - 新增「淨負債」卡片
+   - 新增 getAccountsSummary() Server Action
+
+Database:
+- ALTER TABLE transactions ADD COLUMN is_transfer boolean
+- ALTER TABLE accounts ADD COLUMN sort_order integer
+- CREATE INDEX idx_transactions_is_transfer
+- CREATE INDEX idx_accounts_sort_order
+
+Modified Files (8 core + 3 components):
+- db/schema.ts
+- app/actions/finance.ts
+- app/actions/reports.ts
+- app/actions/backup.ts
+- app/actions/accounts.ts
+- app/actions/accountsBalance.ts
+- app/accounts/page.tsx
+- app/accounts/[id]/page.tsx
+- app/accounts/components/AccountSortButtons.tsx (new)
+- app/accounts/components/RefreshBalanceButton.tsx (new)
+- app/accounts/[id]/components/TimeRangeSelector.tsx (new)
+
+Migration:
+- drizzle/0002_add_transfer_and_sort_order.sql
+- drizzle/meta/_journal.json
+
+Docs:
+- MIGRATION_GUIDE.md
+- CHANGELOG.md
+- REFACTORING_SUMMARY.md
+
+Breaking Changes: None
+TypeScript Errors: None
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>

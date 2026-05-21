@@ -2,14 +2,17 @@
 
 import { db } from "@/db";
 import { accounts, transactions } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, gte } from "drizzle-orm";
 import Decimal from "decimal.js";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 
 /**
  * 取得所有帳戶及其餘額（包含初始餘額）
  */
 export async function getAccountsWithBalance() {
-  const allAccounts = await db.select().from(accounts).orderBy(accounts.name);
+  const allAccounts = await db.select().from(accounts).orderBy(accounts.sortOrder, accounts.name);
 
   const accountsWithBalance = await Promise.all(
     allAccounts.map(async (account) => {
@@ -55,9 +58,37 @@ export async function getAccountsWithBalance() {
 }
 
 /**
- * 取得特定帳戶的所有交易明細
+ * 取得特定帳戶的交易明細（支援時間範圍篩選）
+ * @param accountId 帳戶 ID
+ * @param range 時間範圍：'3m' | '6m' | '1y' | 'all'（預設 '6m'）
  */
-export async function getAccountTransactions(accountId: number) {
+export async function getAccountTransactions(
+  accountId: number,
+  range: '3m' | '6m' | '1y' | 'all' = '6m'
+) {
+  // 初始化 dayjs plugins
+  dayjs.extend(utc);
+  dayjs.extend(timezone);
+
+  // 計算時間範圍的起始時間
+  let startDate: string | null = null;
+  const now = dayjs().tz("Asia/Taipei");
+
+  switch (range) {
+    case '3m':
+      startDate = now.subtract(3, 'month').toISOString();
+      break;
+    case '6m':
+      startDate = now.subtract(6, 'month').toISOString();
+      break;
+    case '1y':
+      startDate = now.subtract(1, 'year').toISOString();
+      break;
+    case 'all':
+      startDate = null; // 不限制時間
+      break;
+  }
+
   const accountTransactions = await db
     .select({
       id: transactions.id,
@@ -68,7 +99,11 @@ export async function getAccountTransactions(accountId: number) {
       memo: transactions.memo,
     })
     .from(transactions)
-    .where(eq(transactions.accountId, accountId))
+    .where(
+      startDate
+        ? and(eq(transactions.accountId, accountId), gte(transactions.transactionDate, startDate))
+        : eq(transactions.accountId, accountId)
+    )
     .orderBy(sql`${transactions.transactionDate} DESC`);
 
   // 取得分類名稱
@@ -129,5 +164,33 @@ export async function getTotalAssets() {
   return {
     totalAssets: totalAssets.toFixed(2),
     includedAccountsCount: accountsWithBalance.filter((a) => a.includeInTotal).length,
+  };
+}
+
+/**
+ * 取得帳戶總覽統計（總淨資產與淨負債）
+ */
+export async function getAccountsSummary() {
+  const accountsWithBalance = await getAccountsWithBalance();
+
+  let netWorth = new Decimal(0); // 總淨資產（所有帳戶餘額加總）
+  let totalLiabilities = new Decimal(0); // 淨負債（僅負數帳戶的絕對值加總）
+
+  for (const account of accountsWithBalance) {
+    if (account.includeInTotal) {
+      const balance = new Decimal(account.balance);
+      netWorth = netWorth.plus(balance);
+
+      // 如果帳戶餘額為負，計入負債
+      if (balance.lessThan(0)) {
+        totalLiabilities = totalLiabilities.plus(balance.abs());
+      }
+    }
+  }
+
+  return {
+    netWorth: netWorth.toFixed(2),
+    totalLiabilities: totalLiabilities.toFixed(2),
+    accountCount: accountsWithBalance.filter((a) => a.includeInTotal).length,
   };
 }
